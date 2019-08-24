@@ -1,0 +1,28 @@
+app:
+  progname: hardware
+  id: hardware
+  # syslog, file, stderr, stdout, filename
+  log: stdout
+  tmpdir: /tmp
+  script: scripts/hardware.rb
+  tmout:
+    database_start: 30
+    # Время ожидания освобождения очереди
+    locker: 15
+    # Время ожидания ответа от микросервиса
+    service: 15
+    queue_access: 1
+    double_answer: 3
+db:
+  adapter: postgres
+  user: dbuser
+  password: dbpassword
+  database: dbname
+  host: 127.0.0.1
+  port: 5432
+  search_path: public
+http:
+  external_url: http://адрес-сервера/r
+  host: avgust.ho
+  port: 4435
+  ping_host: любой хост, до которого скрипт по-traceroute

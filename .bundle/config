@@ -1,0 +1,4 @@
+---
+BUNDLE_PATH: "/home/dimytch/work/sudo.su/bundle-gems"
+BUNDLE_BIN: "bin"
+BUNDLE_JOBS: "4"
