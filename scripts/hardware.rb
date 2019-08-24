@@ -3,7 +3,7 @@ require 'yaml'
 require 'json'
 require 'net/http'
 
-uri = URI '$$Cfg.http.external_url/$$report_id'
+uri = URI '$$Cfg.http.external_url/r/$$report_id'
 
 puts "Изучаю компьютер, спокойствие, только спокойствие."
 
