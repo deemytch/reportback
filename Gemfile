@@ -8,8 +8,6 @@ gem 'pg'
 gem 'workflow'
 gem 'faraday'
 gem 'msgpack'
-gem 'concurrent-ruby', require: 'concurrent'
-gem 'concurrent-ruby-ext'
 gem 'rack'
 gem 'thin'
 
@@ -23,7 +21,6 @@ group :test, :development do
   gem 'fabrication'
   gem 'factory_bot'
   gem 'rubocop'
-#  gem 'faraday' # для утилиты lib/mq.rb
 end
 
 group :test do
