@@ -16,8 +16,6 @@ GEM
     command_line_reporter (4.0.0)
       colored (>= 1.2)
     concurrent-ruby (1.1.5)
-    concurrent-ruby-ext (1.1.5)
-      concurrent-ruby (= 1.1.5)
     daemons (1.3.1)
     diff-lcs (1.3)
     eventmachine (1.2.7)
@@ -88,8 +86,6 @@ PLATFORMS
 DEPENDENCIES
   bunny
   command_line_reporter
-  concurrent-ruby
-  concurrent-ruby-ext
   fabrication
   factory_bot
   faraday
