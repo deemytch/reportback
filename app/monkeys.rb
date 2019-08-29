@@ -76,6 +76,7 @@ class NilClass
   def present?; false; end
   def dig(*args); self; end
   def to_a; []; end
+  def call; end;
 end
 class Object; def present?; ! nil?; end end
 class Numeric

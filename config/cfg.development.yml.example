@@ -27,3 +27,7 @@ http:
   host: avgust.ho
   port: 4435
   ping_host: любой хост, до которого скрипт по-traceroute
+certs:
+  generator: /etc/openvpn/easy-rsa/easyrsa
+  client_conf: 
+  basedir: 

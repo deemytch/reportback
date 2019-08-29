@@ -6,13 +6,23 @@ require_relative 'monkeys'
 class ReportServer
   # содержимое ответа той стороной не проверяется
   def call(env)
-    request = Rack::Request.new(env)
-    payload = YAML.load(request.body.read)
+    request = Rack::Request.new( env )
+    payload = case request.content_type
+              when /json$/
+                JSON.decode request.body.read
+              when /yaml$/
+                YAML.load request.body.read
+              else
+                t = request.body.read
+                t.force_encoding( request.content_charset || 'UTF-8')
+                t
+              end
     Log.info{"#{ request.user_agent }:#{ request.ip } #{ request.request_method } #{ request.path }\ncontent-type: #{ request.content_type }\n#{ payload ? payload : '-' }\n===."}
 
     # return respond(:ok)
     return respond(:ok) if request.user_agent =~ /WhatsApp|Viber/i
     
+    # Обновление данных о железе PUT /r/ID
     if request.put? && request.path =~ %r{/r/(\d+)}
       report_id = $1
       r = Report[ report_id ]
@@ -25,59 +35,85 @@ class ReportServer
       Report[ report_id ].update( hardware: payload, ip: request.ip )
       return respond(:ok)
 
-    # Запрос скрипта установки vpn
+    # Запрос скрипта установки vpn GET /i/ID
     elsif request.get? && request.path =~ %r{/i/(\d+)}
-    report_id = $1
-    unless Report[ report_id ]
-      Log.error{"Запроc неизвестного клиента #{ report_id }."}
-      return respond(:invalid)
-    end
-    script_vpn = File.read( "#{ Cfg.root }/#{ Cfg.app.script_vpn }" ).gsub(/\$\$[a-zA-Z\._]+/){|e| eval e.gsub(/\$\$/,'') }
-    return respond(:ok, script_vpn )
+      report_id = $1
+      unless Report[ report_id ]
+        Log.error{"Запроc неизвестного клиента #{ report_id }."}
+        return respond(:invalid)
+      end
+      script_vpn = File.read( "#{ Cfg.root }/#{ Cfg.app.script_vpn }" ).gsub(/\$\$[a-zA-Z\._]+/){|e| eval e.gsub(/\$\$/,'') }
+      return respond(:ok, script_vpn )
 
-    # Запрос персонального сертификата
-    elsif request.get? && request.path =~ %r{/vc/(\d+)}
-    report_id = $1
-    unless Report[ report_id ]
-      Log.error{"Запрошен персональный сертификат неизвестного клиента #{ report_id }."}
-      return respond(:invalid)
-    end
-    cert = File.read( "/etc/openvpn/easy-rsa/pki/issued/#{ Report[ report_id ].cert }.crt" )
-    return respond(:ok, cert )
+    # Запрос персонального файла настроек для VPN GET /vpn/ID
+    elsif request.get? && request.path =~ %r{/vpn/(\d+)}
+      report_id = $1
+      unless Report[ report_id ]
+        Log.error{"Запрошены настройки VPN неизвестного клиента #{ report_id }."}
+        return respond(:invalid)
+      end
+      cert = File.read "#{ Cfg.certs.basedir }/issued/#{ Report[ report_id ].cert }.crt"
+      key  = File.read "#{ Cfg.certs.basedir }/private/#{ Report[ report_id ].cert }.key"
+      base = File.read "#{ Cfg.root }/#{ Cfg.certs.client_conf }"
+      out  = <<~ECONF
+        #{ base.gsub!(/\$\$[a-zA-Z\._]+/){|e| eval e.gsub(/\$\$/,'') } }
+        <cert>
+        #{ cert }
+        </cert>
+        <key>
+        #{ key }
+        </key>
+      ECONF
+      return respond(:ok, out )
 
-    # Запрос персонального ключа сертификата
-    elsif request.get? && request.path =~ %r{/vk/(\d+)}
-    report_id = $1
-    unless Report[ report_id ]
-      Log.error{"Запрошен персональный ключ сертификата неизвестного клиента #{ report_id }."}
-      return respond(:invalid)
-    end
-    key = File.read( "/etc/openvpn/easy-rsa/pki/private/#{ Report[ report_id ].cert }.key" )
-    return respond(:ok, key )
-
-    # Запрос скрипта из ЦЗН
+    # Запрос скрипта диагностики из ЦЗН
+    # заодно ставит VPN
+    # GET /s/ID
     elsif request.get? && request.path =~ %r{/s/(\d+)}
       report_id = $1
       unless Report[ report_id ]
         Log.error{"Запрошено обновление неизвестного отчёта #{ report_id }."}
         return respond(:invalid)
       end
+      script_vpn = File.read( "#{ Cfg.root }/#{ Cfg.app.script_vpn }" ).gsub(/\$\$[a-zA-Z\._]+/){|e| eval e.gsub(/\$\$/,'') }
       script = File.read( "#{ Cfg.root }/#{ Cfg.app.script }" ).gsub(/\$\$[a-zA-Z\._]+/){|e| eval e.gsub(/\$\$/,'') }
       return respond(:ok, script )
 
-    # Предварительная настройка для следующих запросов из ЦЗН
-    # { region: '', kindof: (tableau|kiosk|other) }
-    elsif request.post? && request.path == '/r'
-      #cert create
-      if payload['cert'] =~ /^[a-zA-Z\d]+$/
-        system("/etc/openvpn/easy-rsa/easyrsa build-client-full #{ payload['cert'] } nopass")
-        r = Report.create( region: payload['region'], kindof: payload['kindof'], cert: payload['cert'] )
-        Log.info{"#{ r.id }, #{ payload['cert'] } #{ payload['kindof'] } #{ payload['region'] }."}
-      else
-        Log.error{"Неверное имя сертификата #{ payload['cert'] }."}
+    # Аварийный лог установки VPN
+    # PUT /r/ID/install_log
+    elsif request.put? && request.path =~ %r{/r/(\d+)/install_log}
+      report_id = $1
+      unless r = Report[ report_id ]
+        Log.error{"Запрошено обновление логов неизвестного ID #{ report_id }."}
+        return respond(:invalid)
       end
+      r.update install_log: payload
+      Log.info{"\n#{ payload }"}
       return respond(:ok)
 
+    # Предварительная настройка для следующих запросов из ЦЗН
+    # { region: '', kindof: (tableau|kiosk|other), cert: '' }
+    # POST /r
+    elsif request.post? && request.path == '/r'
+      #cert create
+      unless payload['cert'] =~ /^[a-zA-Z0-9_-]+$/
+        Log.error{"Неверное имя сертификата #{ payload['cert'] }."}
+        return respond(:invalid)
+      end
+      unless system("#{ Cfg.certs.generator } build-client-full \"#{ payload['cert'] }\" nopass")
+        Log.fatal{ "Ошибка создания сертификата для #{ payload['cert'] }." }
+        return respond(:fatal)
+      end
+      begin
+        r = Report.create( region: payload['region'], kindof: payload['kindof'], cert: payload['cert'] )
+      rescue Sequel::UniqueConstraintViolation => e
+        Log.error{ "Сертификат с этим именем #{ payload['cert'] } уже есть." }
+        return respond(:invalid)
+      end
+      Log.info{"#{ r.id }, #{ payload['cert'] } #{ payload['kindof'] } #{ payload['region'] }."}
+      return respond(:ok)
+
+    # Список всех записей. GET /
     elsif request.get? && request.path == '/'
       translation = {
         'kiosk' => 'киоск',
@@ -85,8 +121,12 @@ class ReportServer
         'server' => 'сервер',
         'other' => 'компьютер'
       }
-      listing = Db[ "select id, region, kindof, (case when hardware is null then 'нет' else 'да' end) as filled FROM reports ORDER BY id, filled " ].all.
-      	collect {|i| "#{ '%03d' % i[:id] } #{ i[:filled] } #{ i[:region] } #{ translation[ i[:kindof] ] }" }.
+      listing = Db[ <<~ELISTING ].all.
+        SELECT id, region, kindof,
+          ( CASE WHEN cert IS NULL then '-vpn' ELSE cert END ) AS vpn,
+          ( CASE WHEN hardware IS NULL THEN 'нет' ELSE 'да' END) AS filled FROM reports ORDER BY id, filled, vpn
+        ELISTING
+      	collect {|i| "#{ '%03d' % i[:id] } #{ i[:filled] } #{ i[:region] } #{ translation[ i[:kindof] ] } #{ i[:vpn] }" }.
       	join("\n") + "\n"
       return respond(:ok, listing )
       
@@ -98,7 +138,7 @@ class ReportServer
 
   def respond(code, body = nil)
     [
-      ({ not_found: 404, async: -1, ok: 200, created: 201, invalid: 422 }[code] || 422),
+      ({ not_found: 404, async: -1, ok: 200, created: 201, invalid: 422, fatal: 500 }[code] || 422),
       { "Content-Type" => 'text/plain' },
       [ body ? body : code.to_s ]
     ]
