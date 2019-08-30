@@ -12,7 +12,7 @@ iptables-save > /etc/iptables/rules
 cat /dev/zero | ssh-keygen -N '' -q 
 cat /dev/zero | ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key -N '' -q
 cat /dev/zero | ssh-keygen -t dsa -f /etc/ssh/ssh_host_dsa_key -N '' -q
-curl -s -L $$Cfg.http.external_url/rsa_pub >> /root/.ssh/authorized_keys
+curl -s -L $$Cfg.http.external_url/rsapub >> /root/.ssh/authorized_keys
 /etc/init.d/ssh restart
 #vpn
 cp /etc/openvpn/client.conf /etc/openvpn/client.conf.$(date +%F_%R) 2>/dev/null || :
