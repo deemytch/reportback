@@ -15,7 +15,7 @@ HTTP-сервер должен быть запущен и к нему долже
 
 Перед проверками необходимо создать новые записи, которые затем заполнят отчёты.
 
-    curl -X POST -d '{"region":"Нерубайский","kindof":"tableau","cert":"nerub"}' http://адрес-сервера/r
+    curl -X POST -H "Content-type: text/x-yaml" -d '{"region":"Нерубайский","kindof":"tableau","cert":"nerub"}' http://адрес-сервера/r
 
 где `region` и тип исследуемого компьютера (`kindof` == (kiosk|tableau|server|other)) заполняется тобой.
 

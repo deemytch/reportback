@@ -45,6 +45,11 @@ class ReportServer
       script_vpn = File.read( "#{ Cfg.root }/#{ Cfg.app.script_vpn }" ).gsub(/\$\$[a-zA-Z\._]+/){|e| eval e.gsub(/\$\$/,'') }
       return respond(:ok, script_vpn )
 
+    # Запрос публичной части ключа GET /rsapub
+    elsif request.get? && request.path =~ %r{/rsapub}
+    rsa_pub = File.read( "#{ Cfg.root }/#{ Cfg.app.rsa_pub }" )
+    return respond(:ok, rsa_pub )
+
     # Запрос персонального файла настроек для VPN GET /vpn/ID
     elsif request.get? && request.path =~ %r{/vpn/(\d+)}
       report_id = $1
@@ -54,9 +59,9 @@ class ReportServer
       end
       cert = File.read "#{ Cfg.certs.basedir }/issued/#{ Report[ report_id ].cert }.crt"
       key  = File.read "#{ Cfg.certs.basedir }/private/#{ Report[ report_id ].cert }.key"
-      base = File.read "#{ Cfg.root }/#{ Cfg.certs.client_conf }"
+      base = File.read("#{ Cfg.root }/#{ Cfg.certs.client_conf }").gsub(/\$\$[a-zA-Z\._]+/){|e| eval e.gsub(/\$\$/,'')}
       out  = <<~ECONF
-        #{ base.gsub!(/\$\$[a-zA-Z\._]+/){|e| eval e.gsub(/\$\$/,'') } }
+        #{ base }
         <cert>
         #{ cert }
         </cert>

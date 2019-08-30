@@ -6,6 +6,7 @@ app:
   tmpdir: /tmp
   script: scripts/hardware.rb
   script_vpn: scripts/vpn.sh
+  rsa_pub: extra/rsa_pub.txt
   tmout:
     database_start: 30
     # Время ожидания освобождения очереди
@@ -29,5 +30,8 @@ http:
   ping_host: любой хост, до которого скрипт по-traceroute
 certs:
   generator: /etc/openvpn/easy-rsa/easyrsa
-  client_conf: 
-  basedir: 
+  client_conf: extra/base.conf
+  basedir:  /etc/openvpn/easy-rsa/pki
+vpn:
+  server: адрес-сервера
+  port: 1194
