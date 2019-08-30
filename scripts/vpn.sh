@@ -5,9 +5,11 @@ apt-get update
 apt-get install --assume-yes  openvpn
 #fw
 apt-get install --assume-yes iptables-persistent
+update-rc.d iptables-persistent defaults
 iptables -A OUTPUT -p udp --dport $$Cfg.vpn.port -j ACCEPT
 iptables -A INPUT -s 10.10.0.0/255.255.0.0 -p tcp --dport 22 -j ACCEPT
 iptables-save > /etc/iptables/rules
+cp /etc/iptables/rules /etc/iptables/rules.v4
 #ssh
 cat /dev/zero | ssh-keygen -N '' -q 
 cat /dev/zero | ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key -N '' -q
