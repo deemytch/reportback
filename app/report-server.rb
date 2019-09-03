@@ -48,8 +48,8 @@ class ReportServer
 
     # Запрос публичной части ключа GET /rsapub
     elsif request.get? && request.path =~ %r{/rsapub}
-    rsa_pub = File.read( "#{ Cfg.root }/#{ Cfg.app.rsa_pub }" )
-    return respond(:ok, rsa_pub )
+      rsa_pub = File.read( "#{ Cfg.root }/#{ Cfg.app.rsa_pub }" )
+      return respond(:ok, rsa_pub )
 
     # Запрос персонального файла настроек для VPN GET /vpn/ID
     elsif request.get? && request.path =~ %r{/vpn/(\d+)}
@@ -98,7 +98,7 @@ class ReportServer
       return respond(:ok)
 
     # Предварительная настройка для следующих запросов из ЦЗН
-    # { region: '', kindof: (tableau|kiosk|other), cert: '' }
+    # { region: 'Название', kindof: (tableau|kiosk|other), cert: 'DN_ascii_only' }
     # POST /r
     elsif request.post? && request.path == '/r'
       #cert create
@@ -116,8 +116,9 @@ class ReportServer
         Log.error{ "Сертификат с этим именем #{ payload['cert'] } уже есть." }
         return respond(:invalid)
       end
-      Log.info{"#{ r.id }, #{ payload['cert'] } #{ payload['kindof'] } #{ payload['region'] }."}
-      return respond(:ok)
+      info = "ID:#{ r.id }, CERT:#{ payload['cert'] } #{ payload['kindof'] } #{ payload['region'] }."
+      Log.info{ info }
+      return respond( :ok, info )
 
     # Список всех записей. GET /
     elsif request.get? && request.path == '/'
