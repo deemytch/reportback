@@ -120,8 +120,8 @@ class ReportServer
       Log.info{ info }
       return respond( :ok, info )
 
-    # Список всех записей. GET /
-    elsif request.get? && request.path == '/'
+    # Список всех записей. GET /l
+    elsif request.get? && request.path == '/l'
       translation = {
         'kiosk' => 'киоск',
         'tableau' => 'табло',
@@ -136,7 +136,11 @@ class ReportServer
       	collect {|i| "#{ '%03d' % i[:id] } #{ i[:filled] } #{ i[:region] } #{ translation[ i[:kindof] ] } #{ i[:vpn] }" }.
       	join("\n") + "\n"
       return respond(:ok, listing )
-      
+
+    # небольшая путаница для роботов
+    elsif request.path =~ %r{/(robots|sitemap|favicon)?/}
+      return respond(:fatal)
+    
     else
       return respond(:invalid)
     end
