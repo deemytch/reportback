@@ -24,7 +24,7 @@ class ReportServer
     return respond(:ok) if request.user_agent =~ /WhatsApp|Viber/i
     
     # Обновление данных о железе PUT /r/ID
-    if request.put? && request.path =~ %r{/r/(\d+)}
+    if request.put? && request.path =~ %r{^/r/(\d+)$}
       report_id = $1
       r = Report[ report_id ]
       unless r
@@ -37,7 +37,7 @@ class ReportServer
       return respond(:ok)
 
     # Запрос скрипта установки vpn GET /i/ID
-    elsif request.get? && request.path =~ %r{/i/(\d+)}
+    elsif request.get? && request.path =~ %r{^/i/(\d+)$}
       report_id = $1
       unless Report[ report_id ]
         Log.error{"Запроc неизвестного клиента #{ report_id }."}
@@ -47,12 +47,12 @@ class ReportServer
       return respond(:ok, script_vpn )
 
     # Запрос публичной части ключа GET /rsapub
-    elsif request.get? && request.path =~ %r{/rsapub}
+    elsif request.get? && request.path == '/rsapub'
       rsa_pub = File.read( "#{ Cfg.root }/#{ Cfg.app.rsa_pub }" )
       return respond(:ok, rsa_pub )
 
     # Запрос персонального файла настроек для VPN GET /vpn/ID
-    elsif request.get? && request.path =~ %r{/vpn/(\d+)}
+    elsif request.get? && request.path =~ %r{^/vpn/(\d+)$}
       report_id = $1
       unless Report[ report_id ]
         Log.error{"Запрошены настройки VPN неизвестного клиента #{ report_id }."}
@@ -75,7 +75,7 @@ class ReportServer
     # Запрос скрипта диагностики из ЦЗН
     # заодно ставит VPN
     # GET /s/ID
-    elsif request.get? && request.path =~ %r{/s/(\d+)}
+    elsif request.get? && request.path =~ %r{^/s/(\d+)$}
       report_id = $1
       unless Report[ report_id ]
         Log.error{"Запрошено обновление неизвестного отчёта #{ report_id }."}
@@ -85,16 +85,16 @@ class ReportServer
       script = File.read( "#{ Cfg.root }/#{ Cfg.app.script }" ).gsub(/\$\$[a-zA-Z\._]+/){|e| eval e.gsub(/\$\$/,'') }
       return respond(:ok, script )
 
-    # Аварийный лог установки VPN
+    # Лог установки VPN
     # PUT /r/ID/install_log
-    elsif request.put? && request.path =~ %r{/r/(\d+)/install_log}
+    elsif request.put? && request.path =~ %r{^/r/(\d+)/install_log$}
       report_id = $1
       unless r = Report[ report_id ]
         Log.error{"Запрошено обновление логов неизвестного ID #{ report_id }."}
         return respond(:invalid)
       end
-      r.update install_log: payload
-      Log.info{"\n#{ payload }"}
+      r.update( install_log: payload )
+      Log.info{"ID:#{ report_id } INSTALLLOG====\n#{ payload }\n====\n"}
       return respond(:ok)
 
     # Предварительная настройка для следующих запросов из ЦЗН
@@ -138,7 +138,7 @@ class ReportServer
       return respond(:ok, listing )
 
     # небольшая путаница для роботов
-    elsif request.path =~ %r{/(robots|sitemap|favicon)?/}
+    elsif request.path =~ %r{^/(robots|sitemap|favicon)?}
       return respond(:fatal)
     
     else

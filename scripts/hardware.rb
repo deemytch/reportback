@@ -17,6 +17,14 @@ def send_report( uri, report, content_type = :yaml )
   !! ret.is_a?( Net::HTTPSuccess )
 end
 
+def errormsg( install_log )
+  puts send_report( URI( '$$Cfg.http.external_url/r/$$report_id/install_log' ), File.read( install_log ), :plain ) ?
+  "Лог неудачной установки отправлен" :
+  "Ошибка отправки лога неудачной установки"
+  puts "\n\n\n\tСлучилась ошибка. Отправьте снимок экрана, пожалуйста техподдержке.\n\n\n"
+end
+
+
 puts "Изучаю компьютер, спокойствие, только спокойствие."
 
 puts `ruby -v`
@@ -72,11 +80,18 @@ puts send_report( URI( "$$Cfg.http.external_url/r/$$report_id" ), report ) ?
 
 install_log = "/tmp/install_log-$$report_id"
 
-if system( "#{ script_vpn } >#{ install_log } 2>&1" )
+# Запускаем установку VPN
+uri = URI( "$$Cfg.http.external_url/i/$$report_id" )
+req = Net::HTTP::Get.new( uri )
+ret = Net::HTTP.start( uri.hostname, uri.port ){|http| http.request(req) }
+if ! ret.is_a?( Net::HTTPSuccess )
+  errormsg( install_log )
+  exit 255
+end
+File.open('/tmp/install.sh', 'w'){ |f| f.write ret.body.force_encoding('UTF-8') }
+`chmod +x /tmp/install.sh`
+if system( "sudo /tmp/install.sh >#{ install_log } 2>&1 ")
   puts "Все хорошо. Спасибо. Можно переключаться на веб-интерфейс.\n\t\tCtrl-D\n\t\tCtrl-Alt-F7\n\n"
 else
-  puts send_report( '$$Cfg.http.external_url/r/$$report_id/install_log', File.read( install_log ), :plain ) ?
-    "Лог неудачной установки отправлен" :
-    "Ошибка отправки лога неудачной установки"
-  puts "\n\n\n\tСлучилась ошибка. Отправьте снимок экрана, пожалуйста техподдержке.\n\n\n"
+  errormsg( install_log )
 end
