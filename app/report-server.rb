@@ -1,3 +1,4 @@
+require 'json'
 require_relative 'report'
 require_relative 'monkeys'
 
@@ -9,7 +10,7 @@ class ReportServer
     request = Rack::Request.new( env )
     payload = case request.content_type
               when /json$/
-                JSON.decode request.body.read
+                JSON.parse request.body.read
               when /yaml$/
                 YAML.load request.body.read
               else
