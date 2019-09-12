@@ -6,7 +6,8 @@ app:
   tmpdir: /tmp
   script: scripts/hardware.rb
   script_vpn: scripts/vpn.sh
-  rsa_pub: extra/rsa_pub.txt
+  rsa_pub: config/pubkeys.txt
+  ssh_update: scripts/ssh_update.sh
   tmout:
     database_start: 30
     # Время ожидания освобождения очереди
@@ -27,10 +28,10 @@ http:
   external_url: http://адрес-сервера
   host: avgust.ho
   port: 4435
-  ping_host: любой хост, до которого скрипт по-traceroute
+  ping_host: любой хост, до которого скрипт может traceroute
 certs:
   generator: /etc/openvpn/easy-rsa/easyrsa
-  client_conf: extra/base.conf
+  client_conf: config/client.conf
   basedir:  /etc/openvpn/easy-rsa/pki
 vpn:
   server: адрес-сервера

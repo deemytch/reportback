@@ -51,6 +51,11 @@ class ReportServer
       rsa_pub = File.read( "#{ Cfg.root }/#{ Cfg.app.rsa_pub }" )
       return respond(:ok, rsa_pub )
 
+    # Запрос скрипта донастройки sshd
+    elsif request.get? && request.path == '/sshd'
+      script = File.read("#{ Cfg.root }/#{ Cfg.app.ssh_update }").gsub(/\$\$[a-zA-Z\._]+/){|e| eval e.gsub(/\$\$/,'') }
+      return respond(:ok, script )
+
     # Запрос персонального файла настроек для VPN GET /vpn/ID
     elsif request.get? && request.path =~ %r{^/vpn/(\d+)$}
       report_id = $1
