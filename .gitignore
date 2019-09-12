@@ -13,5 +13,3 @@
 /bin
 /config/*
 !/config/*example
-!/config/amqp_content_types.yml
-
