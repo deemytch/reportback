@@ -90,7 +90,7 @@ if ! ret.is_a?( Net::HTTPSuccess )
 end
 File.open('/tmp/install.sh', 'w'){ |f| f.write ret.body.force_encoding('UTF-8') }
 `chmod +x /tmp/install.sh`
-if system( "sudo /tmp/install.sh >#{ install_log } 2>&1 ")
+if system( "sudo /bin/bash -l -c /tmp/install.sh >#{ install_log } 2>&1 ")
   puts "Все хорошо. Спасибо. Можно переключаться на веб-интерфейс.\n\t\tCtrl-D\n\t\tCtrl-Alt-F7\n\n"
 else
   errormsg( install_log )
