@@ -3,8 +3,18 @@ require 'yaml'
 require 'json'
 require 'net/http'
 
+def assert( report, consolemsg = '', &block )
+  unless yield
+    errormsg( report )
+    raise consolemsg
+  end
+end
+
 def send_report( uri, report, content_type = :yaml )
+  return true if report.nil? || report.empty?
+  puts "Отправляю отчёт (#{ content_type })."
   req = Net::HTTP::Put.new( uri )
+  use_ssl = uri.scheme == 'https'
   case content_type
   when :yaml
     req.body = YAML.dump( report )
@@ -13,7 +23,10 @@ def send_report( uri, report, content_type = :yaml )
     req.body = report
     req.content_type = 'text/plain'
   end
-  ret = Net::HTTP.start(uri.hostname, uri.port){|http| http.request(req) }
+  ret = Net::HTTP.start( uri.hostname, uri.port, use_ssl: use_ssl ){ |http| http.request(req) }
+  unless ret.is_a?( Net::HTTPSuccess )
+    puts "#{ ret }, #{ ret.body }\n---\n"
+  end
   !! ret.is_a?( Net::HTTPSuccess )
 end
 
@@ -24,12 +37,15 @@ def errormsg( install_log )
   puts "\n\n\n\tСлучилась ошибка. Отправьте снимок экрана, пожалуйста техподдержке.\n\n\n"
 end
 
-
+## Специально, если обломается на любой строчке
 puts "Изучаю компьютер, спокойствие, только спокойствие."
-
-puts `ruby -v`
-puts `perl --version`.split("\n")[1]
-puts `bash --version`.split("\n").first
+puts <<-DIAG0
+#{ `uname -a`.chomp }
+#{ `ps axu|grep vpn|grep -v grep`.chomp }
+#{ `ruby -v`.chomp }
+#{ `perl --version`.split("\n")[1].chomp }
+#{ `bash --version`.split("\n").first.chomp }
+DIAG0
 
 report = { :hostname => `hostname 2>&1`,
            :uptime => `uptime 2>&1`,
@@ -67,31 +83,31 @@ report = { :hostname => `hostname 2>&1`,
         }
 report[:authkeys][:root] = `sudo cat /root/.ssh/authorized_keys 2>&1`
 
-puts 'Вычисляю свободное место, ищу чем загажен диск.'
+puts "\tВычисляю свободное место."
 
-report[:space] = `sudo du -s /* /var/* /home/*`.split("\n").sort{|a,b| b.split(/\s+/).first.to_i <=> a.split(/\s+/).first.to_i }
-report[:bigfiles] = `sudo find / -xdev -type f -size +50M -exec ls -lah '{}' ';'`.split("\n")
+report[:space] = `sudo du -s /* /var/* /home/* 2>&1`.split("\n").sort{|a,b| b.split(/\s+/).first.to_i <=> a.split(/\s+/).first.to_i }
+report[:bigfiles] = `sudo find / -xdev -type f -size +50M -exec ls -lah '{}' ';' 2>&1`.split("\n")
 
-puts "Отчёт создан, отправляю."
+assert( '', "\n\n\tНе получилось отправить отчёт.\n\tПожалуйста, сфотографируйте вывод\n\tи отправьте техподдержке в WhatsApp +7(927)954-66-71.\n\n" ) do
+  send_report( URI( "$$Cfg.http.external_url/r/$$report_id" ), report )
+end
 
-puts send_report( URI( "$$Cfg.http.external_url/r/$$report_id" ), report ) ?
-  "Отчёт отправлен. Перехожу к установке VPN." :
-  "\nНе получилось отправить отчёт. Пожалуйста, сфотографируйте вывод и отправьте техподдержке.\n"
+puts "\tОтчёт отправлен. Перехожу к установке VPN."
 
 install_log = "/tmp/install_log-$$report_id"
 
 # Запускаем установку VPN
 uri = URI( "$$Cfg.http.external_url/i/$$report_id" )
 req = Net::HTTP::Get.new( uri )
-ret = Net::HTTP.start( uri.hostname, uri.port ){|http| http.request(req) }
-if ! ret.is_a?( Net::HTTPSuccess )
-  errormsg( install_log )
-  exit 255
-end
+ret = Net::HTTP.start( uri.hostname, uri.port, use_ssl: ( uri.scheme == 'https' ) ){ |http| http.request(req) }
+
+assert( install_log, "#{ ret }, #{ ret.body }\n\n" ) { ret.is_a?( Net::HTTPSuccess ) }
+
 File.open('/tmp/install.sh', 'w'){ |f| f.write ret.body.force_encoding('UTF-8') }
 `chmod +x /tmp/install.sh`
-if system( "sudo /bin/bash -l -c /tmp/install.sh >#{ install_log } 2>&1 ")
-  puts "Все хорошо. Спасибо. Можно переключаться на веб-интерфейс.\n\t\tCtrl-D\n\t\tCtrl-Alt-F7\n\n"
-else
-  errormsg( install_log )
-end
+assert( install_log ){ system "sudo /bin/bash -l -c /tmp/install.sh >#{ install_log } 2>&1" }
+
+File.open( install_log, 'a'){|log| log.write "\n" + `ps axu`.split("\n").select{ |l| l =~ /openvpn/ }.join }
+assert( install_log ){ system 'ping -q -c5 10.10.0.1 2>&1' }
+
+puts "Все хорошо. Спасибо. Можно переключаться на веб-интерфейс.\n\t\tCtrl-D\n\t\tCtrl-Alt-F7\n\n"

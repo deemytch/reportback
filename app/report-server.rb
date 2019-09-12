@@ -21,7 +21,7 @@ class ReportServer
     Log.info{"#{ request.user_agent }:#{ request.ip } #{ request.request_method } #{ request.path }\ncontent-type: #{ request.content_type }\n#{ payload ? payload : '-' }\n===."}
 
     # return respond(:ok)
-    return respond(:ok) if request.user_agent =~ /WhatsApp|Viber/i
+    return respond(:ok) if request.user_agent =~ /WhatsApp|Viber|Telegram|Bot/i
     
     # Обновление данных о железе PUT /r/ID
     if request.put? && request.path =~ %r{^/r/(\d+)$}
