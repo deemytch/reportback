@@ -23,7 +23,7 @@ def send_report( uri, report, content_type = :yaml )
     req.body = report
     req.content_type = 'text/plain'
   end
-  ret = Net::HTTP.start( uri.hostname, uri.port, use_ssl: use_ssl ){ |http| http.request(req) }
+  ret = Net::HTTP.start( uri.hostname, uri.port, :use_ssl => use_ssl ){ |http| http.request(req) }
   unless ret.is_a?( Net::HTTPSuccess )
     puts "#{ ret }, #{ ret.body }\n---\n"
   end
@@ -99,7 +99,7 @@ install_log = "/tmp/install_log-$$report_id"
 # Запускаем установку VPN
 uri = URI( "$$Cfg.http.external_url/i/$$report_id" )
 req = Net::HTTP::Get.new( uri )
-ret = Net::HTTP.start( uri.hostname, uri.port, use_ssl: ( uri.scheme == 'https' ) ){ |http| http.request(req) }
+ret = Net::HTTP.start( uri.hostname, uri.port, :use_ssl => ( uri.scheme == 'https' ) ){ |http| http.request(req) }
 
 assert( install_log, "#{ ret }, #{ ret.body }\n\n" ) { ret.is_a?( Net::HTTPSuccess ) }
 
