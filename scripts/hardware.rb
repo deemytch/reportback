@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby
 require 'yaml'
-require 'json'
 require 'net/http'
 
 def assert( report, consolemsg = '', &block )
