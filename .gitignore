@@ -1,0 +1,16 @@
+/public/assets*
+/tmp
+*~
+/vendor
+.env.*
+/spec/examples.txt
+/settings.yml
+/Dockerfile
+/.key/*
+/logs/
+/public
+/info/version
+/bin
+/config/*
+!/config/*example
+/.bundle
